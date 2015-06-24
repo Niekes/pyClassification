@@ -1,15 +1,17 @@
-import operator
+from os import listdir
 
 if __name__ == "__main__":
     def init():
-        dataSet = open( "../data/sport/train/s001.txt" );
-        textArray = []
-        for each_paragraph in dataSet.readlines():
-            splited_paragraph = [value for value in each_paragraph.split() if value != '']
-            for each_word in splited_paragraph:
-                textArray.append(each_word)
-        clean_up_text(textArray)
-        dataSet.close()
+        sport_files = listdir("../data/sport/train")
+        for each_file in sport_files:
+            dataSet = open("../data/sport/train/" + each_file)
+            textArray = []
+            for each_paragraph in dataSet.readlines():
+                splited_paragraph = [value for value in each_paragraph.split() if value != '']
+                for each_word in splited_paragraph:
+                    textArray.append(each_word)
+            clean_up_text(textArray)
+            dataSet.close()
 
     def clean_up_text(text):
         clean_text = []
