@@ -29,6 +29,4 @@ if __name__ == "__main__":
             else:
                 word_count[each_word] += 1
         print(word_count)
-
-
     init()
