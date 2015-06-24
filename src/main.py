@@ -5,12 +5,12 @@ if __name__ == "__main__":
         sport_files = listdir("../data/sport/train")
         for each_file in sport_files:
             dataSet = open("../data/sport/train/" + each_file)
-            textArray = []
+            text_list = []
             for each_paragraph in dataSet.readlines():
                 splited_paragraph = [value for value in each_paragraph.split() if value != '']
                 for each_word in splited_paragraph:
-                    textArray.append(each_word)
-            clean_up_text(textArray)
+                    text_list.append(each_word)
+            clean_up_text(text_list)
             dataSet.close()
 
     def clean_up_text(text):
