@@ -26,8 +26,7 @@ if __name__ == "__main__":
             text_list = []
             for each_paragraph in data_set.readlines():
                 split_paragraph = [value for value in each_paragraph.split() if value != '']
-                for each_word in split_paragraph:
-                    text_list.append(each_word)
+                text_list += split_paragraph
             cleaned = clean_up_text(text_list)
 
             vocabulary[cat] = cleaned
