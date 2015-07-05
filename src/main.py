@@ -5,16 +5,21 @@ if __name__ == "__main__":
     data_path = "../data/"
     train_path = "/train"
     categories = ["sport", "politik", "wirtschaft"]
+    docs_count = {"_total": 0}
 
     def init():
         for cat in categories:
             category = parse_data(cat)
             categories_word_count[cat] = create_word_dict(category)
         print_dict(categories_word_count)
+        print(docs_count)
 
-    def parse_data(path):
-        full_path = data_path + path + train_path
+    def parse_data(cat):
+        full_path = data_path + cat + train_path
         files = listdir(full_path)
+        nr_of_docs = len(files)
+        docs_count[cat] = nr_of_docs
+        docs_count["_total"] += nr_of_docs
         for each_file in files:
             data_set = open(full_path + "/" + each_file)
             text_list = []
