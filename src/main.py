@@ -1,17 +1,30 @@
 from os import listdir
 
 if __name__ == "__main__":
+    categories_word_count = {}
+    data_path = "../data/"
+    train_path = "/train"
+    categories = ["sport", "politik", "wirtschaft"]
+
     def init():
-        sport_files = listdir("../data/sport/train")
-        for each_file in sport_files:
-            dataSet = open("../data/sport/train/" + each_file)
+        for cat in categories:
+            category = parse_data(cat)
+            categories_word_count[cat] = create_word_dict(category)
+        print_dict(categories_word_count)
+
+    def parse_data(path):
+        full_path = data_path + path + train_path
+        files = listdir(full_path)
+        for each_file in files:
+            data_set = open(full_path + "/" + each_file)
             text_list = []
-            for each_paragraph in dataSet.readlines():
-                splited_paragraph = [value for value in each_paragraph.split() if value != '']
-                for each_word in splited_paragraph:
+            for each_paragraph in data_set.readlines():
+                split_paragraph = [value for value in each_paragraph.split() if value != '']
+                for each_word in split_paragraph:
                     text_list.append(each_word)
-            clean_up_text(text_list)
-            dataSet.close()
+            cleaned = clean_up_text(text_list)
+            data_set.close()
+            return cleaned
 
     def clean_up_text(text):
         clean_text = []
@@ -21,7 +34,7 @@ if __name__ == "__main__":
                 each_word = each_word.replace(symbols[s], "")
             if len(each_word) > 0:
                 clean_text.append(each_word)
-        create_word_dict(clean_text)
+        return clean_text
 
     def create_word_dict(clean_text):
         word_count = {}
@@ -30,5 +43,15 @@ if __name__ == "__main__":
                 word_count[each_word] = 1
             else:
                 word_count[each_word] += 1
-        print(word_count)
+        return word_count
+
+    def print_dict(dict):
+        print()
+        for key in dict:
+            print("###### " + key + " ######")
+            print()
+            for word in dict[key]:
+                print("   " + word + ": " + str(dict[key][word]))
+            print()
+
     init()
