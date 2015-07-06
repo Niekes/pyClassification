@@ -2,7 +2,8 @@ from os import listdir
 import math
 
 if __name__ == "__main__":
-    categories_word_count = {}
+    stop_words = set()
+    classes_word_count = {}
     vocabulary = {}
     cond_prob = {}
     data_path = "../data/"
@@ -13,17 +14,26 @@ if __name__ == "__main__":
     results = {}
 
     def init():
+        init_stopwords()
         vocabulary["_all_words"] = set()
         for cls in classes:
             category = train_data(cls)
-            categories_word_count[cls] = create_word_dict(category)
+            classes_word_count[cls] = create_word_dict(category)
         do_condprob()
 
         for cls in classes:
             results[cls] = {}
             test_data(cls)
 
-        print_dict(results)
+        print_dict(classes_word_count)
+
+    def init_stopwords():
+        s_words = open("../data/stop_words.txt")
+        for word in s_words.readlines():
+            word = word.strip()
+            stop_words.add(word)
+            stop_words.add(word.title())
+            stop_words.add(word.upper())
 
     def test_data(cls):
         full_path = data_path + cls + test_path
@@ -84,7 +94,7 @@ if __name__ == "__main__":
             symbols = "!@$%&*()_-+[]{}:\"<>?.,;/='"
             for s in range(0, len(symbols)):
                 each_word = each_word.replace(symbols[s], "")
-            if len(each_word) > 0:
+            if len(each_word) > 0 and each_word not in stop_words:
                 clean_text.append(each_word)
         return clean_text
 
@@ -108,7 +118,7 @@ if __name__ == "__main__":
 
     def get_len_of_class(cls):
         count = 0
-        category = categories_word_count[cls]
+        category = classes_word_count[cls]
         for word in category:
             count += category[word]
         return count
@@ -121,7 +131,7 @@ if __name__ == "__main__":
         return cond_prob
 
     def calc_condprob(word, cls):
-        t_ct = categories_word_count[cls].get(word, 0)
+        t_ct = classes_word_count[cls].get(word, 0)
         return (t_ct + 1) / (get_len_of_class(cls) + len(vocabulary["_all_words"]))
 
     init()
