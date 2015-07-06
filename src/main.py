@@ -1,4 +1,5 @@
 from os import listdir
+import math
 
 if __name__ == "__main__":
     categories_word_count = {}
@@ -6,20 +7,62 @@ if __name__ == "__main__":
     cond_prob = {}
     data_path = "../data/"
     train_path = "/train"
-    categories = ["sport", "politik", "wirtschaft"]
+    test_path = "/test"
+    classes = ["sport", "politik", "wirtschaft"]
     docs_count = {"_total": 0}
+    results = {}
 
     def init():
-        for cat in categories:
-            category = parse_data(cat)
-            categories_word_count[cat] = create_word_dict(category)
-        print_dict(categories_word_count)
+        vocabulary["_all_words"] = set()
+        for cls in classes:
+            category = train_data(cls)
+            categories_word_count[cls] = create_word_dict(category)
+        do_condprob()
 
-    def parse_data(cat):
-        full_path = data_path + cat + train_path
+        for cls in classes:
+            results[cls] = {}
+            test_data(cls)
+
+        print_dict(results)
+
+    def test_data(cls):
+        full_path = data_path + cls + test_path
+        files = listdir(full_path)
+        for each_file in files:
+            data_set = open(full_path + "/" + each_file)
+            text_list = []
+            for each_paragraph in data_set.readlines():
+                split_paragraph = [value for value in each_paragraph.split() if value != '']
+                text_list += split_paragraph
+            cleaned = clean_up_text(text_list)
+            cleaned = remove_non_existent_in_voc(cleaned)
+            doc_score = apply_multinomial_nb(cleaned)
+            results[cls][each_file] = doc_score
+        return results
+
+    def remove_non_existent_in_voc(words):
+        existent = []
+        voc = vocabulary["_all_words"]
+        for word in words:
+            if word in voc:
+                existent.append(word)
+        return existent
+
+    def apply_multinomial_nb(doc_voc):
+        score = {}
+        for cls in classes:
+            prior = docs_count[cls] / docs_count["_total"]
+            score[cls] = math.log2(prior)
+            for token in doc_voc:
+                if token in cond_prob:
+                    score[cls] += math.log2(cond_prob[token][cls])
+        return score
+
+    def train_data(cls):
+        full_path = data_path + cls + train_path
         files = listdir(full_path)
         nr_of_docs = len(files)
-        docs_count[cat] = nr_of_docs
+        docs_count[cls] = nr_of_docs
         docs_count["_total"] += nr_of_docs
         for each_file in files:
             data_set = open(full_path + "/" + each_file)
@@ -29,11 +72,8 @@ if __name__ == "__main__":
                 text_list += split_paragraph
             cleaned = clean_up_text(text_list)
 
-            vocabulary[cat] = cleaned
-            if "_all_words" in vocabulary:
-                vocabulary["_all_words"] = set(vocabulary["_all_words"]).union(set(cleaned))
-            else:
-                vocabulary["_all_words"] = set(cleaned)
+            vocabulary[cls] = cleaned
+            vocabulary["_all_words"] = vocabulary["_all_words"] | set(cleaned)
 
             data_set.close()
             return cleaned
@@ -62,13 +102,13 @@ if __name__ == "__main__":
         for key in dict:
             print("###### " + key + " ######")
             print()
-            for word in dict[key]:
+            for word in sorted(dict[key]):
                 print("   " + word + ": " + str(dict[key][word]))
             print()
 
-    def get_len_of_cat(cat):
+    def get_len_of_class(cls):
         count = 0
-        category = categories_word_count[cat]
+        category = categories_word_count[cls]
         for word in category:
             count += category[word]
         return count
@@ -76,12 +116,12 @@ if __name__ == "__main__":
     def do_condprob():
         for word in vocabulary["_all_words"]:
             cond_prob[word] = {}
-            for cat in categories:
+            for cat in classes:
                 cond_prob[word][cat] = calc_condprob(word, cat)
         return cond_prob
 
-    def calc_condprob(word, cat):
-        t_ct = categories_word_count[cat].get(word, 0)
-        return (t_ct + 1) / (get_len_of_cat(cat) + len(vocabulary["_all_words"]))
+    def calc_condprob(word, cls):
+        t_ct = categories_word_count[cls].get(word, 0)
+        return (t_ct + 1) / (get_len_of_class(cls) + len(vocabulary["_all_words"]))
 
     init()
