@@ -1,111 +1,108 @@
 from os import listdir
-import math, re
+import math,re
 
-if __name__ == "__main__":
-    stop_words = set()
-    classes_word_count = {}
-    vocabulary = {}
-    cond_prob = {}
-    data_path = "../data/"
-    train_path = "/train"
-    test_path = "/test"
-    classes = ["sport", "politik", "wirtschaft"]
-    docs_count = {"_total": 0}
-    results = {}
-    class_len = {}
 
-    def init():
-        init_stopwords()
-        vocabulary["_all_words"] = set()
-        for cls in classes:
-            category = train_data(cls)
-            classes_word_count[cls] = create_word_dict(category)
-            class_len[cls] = get_len_of_class(cls)
-            class_len["_all_words"] = len(vocabulary["_all_words"])
-        do_condprob()
-        print("done")
-        for cls in classes:
-            results[cls] = {}
-            test_data(cls)
+class Classification():
 
-        print_results(results)
-        #print_dict(cond_prob)
-        #print_dict(classes_word_count)
+    def __init__(self):
+        self.stop_words = set()
+        self.vocabulary = set()
+        self.data_path = "../data/"
+        self.train_path = "/train"
+        self.test_path = "/test"
+        self.classes = ["sport", "politik", "wirtschaft"]
+        self.docs_count = {"_total": 0}
+        self.cond_prob = {}  # conditional probabilities for all words and class combinations
+        self.results = {}  # here we save the score for all words and class combinations when testing data
+        self.class_len = {}  # save sizes of classes for better performance
+        self.classes_word_count = {}
 
-    def init_stopwords():
+
+    def init(self):
+        self.init_stopwords()
+
+        for cls in self.classes:
+            class_tokens = self.train_data(cls, {})
+            self.classes_word_count[cls] = self.create_word_dict(class_tokens)
+            self.class_len[cls] = self.get_len_of_class(cls)
+            self.class_len["_all_words"] = len(self.vocabulary)
+        self.do_condprob()
+
+        for cls in self.classes:
+            self.results[cls] = {}
+            self.test_data(cls)
+
+        self.print_results(self.results)
+        #self.print_dict(self.classes_word_count)
+
+    def init_stopwords(self):
         s_words = open("../data/stop_words.txt")
         for word in s_words.readlines():
             word = word.strip()
-            stop_words.add(word)
-            stop_words.add(word.title())
-            stop_words.add(word.upper())
+            self.stop_words.add(word)
 
-    def train_data(cls):
-        full_path = data_path + cls + train_path
+    def train_data(self, cls, class_tokens):
+        full_path = self.data_path + cls + self.train_path
         files = listdir(full_path)
         nr_of_docs = len(files)
-        docs_count[cls] = nr_of_docs
-        docs_count["_total"] += nr_of_docs
-        vocabulary[cls] = []
+        self.docs_count[cls] = nr_of_docs
+        self.docs_count["_total"] += nr_of_docs
+        class_tokens[cls] = []
         for each_file in files:
-            text_list = file_to_list(full_path, each_file)
-            cleaned = clean_up_text(text_list)
+            text_list = self.file_to_list(full_path, each_file)
+            cleaned = self.clean_up_text(text_list)
 
-            vocabulary[cls] = vocabulary[cls] + cleaned
-            vocabulary["_all_words"] = vocabulary["_all_words"] | set(cleaned)
-        return vocabulary[cls]
+            class_tokens[cls] += cleaned  # add tokens of file to the class
+            self.vocabulary = self.vocabulary | set(cleaned)  # same as vocabulary.union(cleaned)
+        return class_tokens[cls]
 
-
-    def file_to_list(path, file):
+    def file_to_list(self, path, file):
         data_set = open(path + "/" + file)
         text_list = []
         for line in data_set:
             split_paragraph = [value for value in line.split() if value != '']
-
             for token in split_paragraph:
-                token = re.sub("[^0-9a-zA-Z-äüöÄÜÖ]+", "", token)
-                if len(token) > 0 and token not in stop_words:
-                    text_list.append(token)
+                token = re.sub('\W', "", token)  # remove letters/numbers
+                if len(token) > 0 and token not in self.stop_words:
+                    text_list.append(token.lower())
         data_set.close()
         return text_list
 
-    def test_data(cls):
-        full_path = data_path + cls + test_path
+    def test_data(self, cls):
+        full_path = self.data_path + cls + self.test_path
         files = listdir(full_path)
         for each_file in files:
-            text_list = file_to_list(full_path, each_file)
-            cleaned = clean_up_text(text_list)
-            cleaned = remove_non_existent_in_voc(cleaned)
-            doc_score = apply_multinomial_nb(cleaned)
-            results[cls][each_file] = doc_score
-        return results
+            text_list = self.file_to_list(full_path, each_file)
+            cleaned = self.clean_up_text(text_list)
+            cleaned = self.remove_non_existent_in_voc(cleaned)
+            doc_score = self.apply_multinomial_nb(cleaned)
+            self.results[cls][each_file] = doc_score
 
-    def remove_non_existent_in_voc(words):
+    def remove_non_existent_in_voc(self, words):
         existent = []
-        voc = vocabulary["_all_words"]
         for word in words:
-            if word in voc:
+            if word in self.vocabulary:
                 existent.append(word)
         return existent
 
-    def apply_multinomial_nb(doc_voc):
+    def apply_multinomial_nb(self, doc_voc):
         score = {}
-        for cls in classes:
-            prior = docs_count[cls] / docs_count["_total"]
+        for cls in self.classes:
+            prior = self.docs_count[cls] / self.docs_count["_total"]
             score[cls] = math.log2(prior)
             for token in doc_voc:
-                if token in cond_prob:
-                    score[cls] += math.log2(cond_prob[token][cls])
+                if token in self.cond_prob:
+                    score[cls] += math.log2(self.cond_prob[token][cls])
         return score
 
-    def clean_up_text(text):
+    def clean_up_text(self, text):
         clean_text = []
         for each_word in text:
-            if each_word not in stop_words:
-
+            if each_word not in self.stop_words:
                 clean_text.append(each_word)
         return clean_text
 
+    @staticmethod
     def create_word_dict(clean_text):
         word_count = {}
         for each_word in clean_text:
@@ -115,7 +112,7 @@ if __name__ == "__main__":
                 word_count[each_word] += 1
         return word_count
 
-    def print_dict(dicto):
+    def print_dict(self, dicto):
         print()
         for key in dicto:
             print("###### " + key + " ######")
@@ -124,36 +121,41 @@ if __name__ == "__main__":
                 print("   " + word + ": " + str(dicto[key][word]))
             print()
 
-    def get_len_of_class(cls):
+    def get_len_of_class(self, cls):
         count = 0
-        category = classes_word_count[cls]
+        category = self.classes_word_count[cls]  # category meaning class here
         for word in category:
             count += category[word]
         return count
 
-    def do_condprob():
-        for word in vocabulary["_all_words"]:
-            cond_prob[word] = {}
-            for cls in classes:
-                cond_prob[word][cls] = calc_condprob(word, cls)
-        return cond_prob
+    def do_condprob(self):
+        for word in self.vocabulary:
+            self.cond_prob[word] = {}
+            for cls in self.classes:
+                self.cond_prob[word][cls] = self.calc_condprob(word, cls)
 
-    def calc_condprob(word, cls):
-        t_ct = classes_word_count[cls].get(word, 0)
-        return (t_ct + 1) / (class_len[cls] + class_len["_all_words"])
+    def calc_condprob(self, word, cls):
+        t_ct = self.classes_word_count[cls].get(word, 0)
+        return (t_ct + 1) / (self.class_len[cls] + self.class_len["_all_words"])
 
+    # get the class with highest score for word
+    @staticmethod
     def get_winner(result):
         v = list(result.values())
         k = list(result.keys())
         return k[v.index(max(v))]
 
-    def print_results(result):
+    def print_results(self, result):
         print()
         for key in result:
             print("###### " + key + " ######")
             print()
             for file in sorted(result[key]):
-                print(file + ": " + get_winner(result[key][file]))
+                print(file + ": " + self.get_winner(result[key][file]))
             print()
 
-    init()
+
+if __name__ == "__main__":
+    classification = Classification()
+    classification.init()
+
