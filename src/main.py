@@ -25,8 +25,9 @@ if __name__ == "__main__":
             results[cls] = {}
             test_data(cls)
 
-        print_results(results)
-        # print_dict(cond_prob)
+        #print_results(results)
+        #print_dict(cond_prob)
+        print_dict(classes_word_count)
 
     def init_stopwords():
         s_words = open("../data/stop_words.txt")
@@ -83,10 +84,10 @@ if __name__ == "__main__":
         score = {}
         for cls in classes:
             prior = docs_count[cls] / docs_count["_total"]
-            score[cls] = math.log2(1 + prior)
+            score[cls] = math.log2(prior)
             for token in doc_voc:
                 if token in cond_prob:
-                    score[cls] += math.log2(1 + cond_prob[token][cls])
+                    score[cls] += math.log2(cond_prob[token][cls])
         return score
 
     def clean_up_text(text):
@@ -133,6 +134,8 @@ if __name__ == "__main__":
 
     def calc_condprob(word, cls):
         t_ct = classes_word_count[cls].get(word, 0)
+        result = (t_ct + 1) / (get_len_of_class(cls) + len(vocabulary["_all_words"]))
+        #print(word, cls, result)
         return (t_ct + 1) / (get_len_of_class(cls) + len(vocabulary["_all_words"]))
 
     def get_winner(result):
@@ -145,7 +148,7 @@ if __name__ == "__main__":
         for key in result:
             print("###### " + key + " ######")
             print()
-            for file in result[key]:
+            for file in sorted(result[key]):
                 print(file + ": " + get_winner(result[key][file]))
             print()
 
