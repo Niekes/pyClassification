@@ -1,5 +1,6 @@
 from os import listdir
-import math,re
+import math
+import re
 
 
 class Classification():
@@ -13,7 +14,7 @@ class Classification():
         self.classes = ["sport", "politik", "wirtschaft"]
         self.docs_count = {"_total": 0}
         self.cond_prob = {}  # conditional probabilities for all words and class combinations
-        self.results = {}  # here we save the score for all words and class combinations when testing data
+        self.results = {}  # here we save the score for all files and class combinations when testing data
         self.class_len = {}  # save sizes of classes for better performance
         self.classes_word_count = {}
 
