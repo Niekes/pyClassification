@@ -1,5 +1,5 @@
 from os import listdir
-import math
+import math, re
 
 if __name__ == "__main__":
     stop_words = set()
@@ -12,6 +12,7 @@ if __name__ == "__main__":
     classes = ["sport", "politik", "wirtschaft"]
     docs_count = {"_total": 0}
     results = {}
+    class_len = {}
 
     def init():
         init_stopwords()
@@ -19,15 +20,17 @@ if __name__ == "__main__":
         for cls in classes:
             category = train_data(cls)
             classes_word_count[cls] = create_word_dict(category)
+            class_len[cls] = get_len_of_class(cls)
+            class_len["_all_words"] = len(vocabulary["_all_words"])
         do_condprob()
-
+        print("done")
         for cls in classes:
             results[cls] = {}
             test_data(cls)
 
-        #print_results(results)
+        print_results(results)
         #print_dict(cond_prob)
-        print_dict(classes_word_count)
+        #print_dict(classes_word_count)
 
     def init_stopwords():
         s_words = open("../data/stop_words.txt")
@@ -43,21 +46,26 @@ if __name__ == "__main__":
         nr_of_docs = len(files)
         docs_count[cls] = nr_of_docs
         docs_count["_total"] += nr_of_docs
+        vocabulary[cls] = []
         for each_file in files:
             text_list = file_to_list(full_path, each_file)
             cleaned = clean_up_text(text_list)
 
-            vocabulary[cls] = cleaned
+            vocabulary[cls] = vocabulary[cls] + cleaned
             vocabulary["_all_words"] = vocabulary["_all_words"] | set(cleaned)
+        return vocabulary[cls]
 
-            return cleaned
 
     def file_to_list(path, file):
         data_set = open(path + "/" + file)
         text_list = []
-        for each_paragraph in data_set.readlines():
-            split_paragraph = [value for value in each_paragraph.split() if value != '']
-            text_list += split_paragraph
+        for line in data_set:
+            split_paragraph = [value for value in line.split() if value != '']
+
+            for token in split_paragraph:
+                token = re.sub("[^0-9a-zA-Z-äüöÄÜÖ]+", "", token)
+                if len(token) > 0 and token not in stop_words:
+                    text_list.append(token)
         data_set.close()
         return text_list
 
@@ -93,10 +101,8 @@ if __name__ == "__main__":
     def clean_up_text(text):
         clean_text = []
         for each_word in text:
-            symbols = "!@$%&*()_-+[]{}:\"<>?.,;/='"
-            for s in range(0, len(symbols)):
-                each_word = each_word.replace(symbols[s], "")
-            if len(each_word) > 0 and each_word not in stop_words:
+            if each_word not in stop_words:
+
                 clean_text.append(each_word)
         return clean_text
 
@@ -134,9 +140,7 @@ if __name__ == "__main__":
 
     def calc_condprob(word, cls):
         t_ct = classes_word_count[cls].get(word, 0)
-        result = (t_ct + 1) / (get_len_of_class(cls) + len(vocabulary["_all_words"]))
-        #print(word, cls, result)
-        return (t_ct + 1) / (get_len_of_class(cls) + len(vocabulary["_all_words"]))
+        return (t_ct + 1) / (class_len[cls] + class_len["_all_words"])
 
     def get_winner(result):
         v = list(result.values())
