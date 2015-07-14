@@ -18,21 +18,23 @@ class Classification():
         self.class_len = {}  # save sizes of classes for better performance
         self.classes_word_count = {}
 
-
     def init(self):
         self.init_stopwords()
 
         for cls in self.classes:
+            # all tokens of each class
             class_tokens = self.train_data(cls, {})
+            # vocabulary with words as key and amount as value (for each class)
             self.classes_word_count[cls] = self.create_word_dict(class_tokens)
+            # amount of words in each class
             self.class_len[cls] = self.get_len_of_class(cls)
+            # amout of all words in all classes
             self.class_len["_all_words"] = len(self.vocabulary)
         self.do_condprob()
 
         for cls in self.classes:
             self.results[cls] = {}
             self.test_data(cls)
-
         self.print_results(self.results)
         #self.print_dict(self.classes_word_count)
 
@@ -42,6 +44,8 @@ class Classification():
             word = word.strip()
             self.stop_words.add(word)
 
+    # for each class read all files, count all docs in each class and total number of docs in all classes and
+    # create clean vocabularies with all words (with duplicates) of each class and with all words (no duplicates)
     def train_data(self, cls, class_tokens):
         full_path = self.data_path + cls + self.train_path
         files = listdir(full_path)
@@ -52,10 +56,10 @@ class Classification():
         for each_file in files:
             text_list = self.file_to_list(full_path, each_file)
             cleaned = self.clean_up_text(text_list)
-
             class_tokens[cls] += cleaned  # add tokens of file to the class
             self.vocabulary = self.vocabulary | set(cleaned)  # same as vocabulary.union(cleaned)
         return class_tokens[cls]
+
 
     def file_to_list(self, path, file):
         data_set = open(path + "/" + file)
@@ -69,6 +73,8 @@ class Classification():
         data_set.close()
         return text_list
 
+    # get all files form test data set, clean set, ignore words which aren't in training set, calculate score
+    # and save it to the result vocabulary
     def test_data(self, cls):
         full_path = self.data_path + cls + self.test_path
         files = listdir(full_path)
@@ -89,7 +95,7 @@ class Classification():
     def apply_multinomial_nb(self, doc_voc):
         score = {}
         for cls in self.classes:
-            prior = self.docs_count[cls] / self.docs_count["_total"]
+            prior = self.docs_count[cls] / self.docs_count["_total"] # Nc / N
             score[cls] = math.log2(prior)
             for token in doc_voc:
                 if token in self.cond_prob:
@@ -103,6 +109,7 @@ class Classification():
                 clean_text.append(each_word)
         return clean_text
 
+    # count words of each class
     @staticmethod
     def create_word_dict(clean_text):
         word_count = {}
@@ -124,17 +131,19 @@ class Classification():
 
     def get_len_of_class(self, cls):
         count = 0
-        category = self.classes_word_count[cls]  # category meaning class here
+        category = self.classes_word_count[cls] # category meaning class here
         for word in category:
             count += category[word]
         return count
 
+    # prepare conditional probability: for each word in vocabulary get conditional probability for each class
     def do_condprob(self):
         for word in self.vocabulary:
             self.cond_prob[word] = {}
             for cls in self.classes:
                 self.cond_prob[word][cls] = self.calc_condprob(word, cls)
 
+    # calculate conditional probabilities: t_ct + 1 / amount of words in class (with duplicates) + amount of allwords (no duplicates)
     def calc_condprob(self, word, cls):
         t_ct = self.classes_word_count[cls].get(word, 0)
         return (t_ct + 1) / (self.class_len[cls] + self.class_len["_all_words"])
@@ -154,7 +163,6 @@ class Classification():
             for file in sorted(result[key]):
                 print(file + ": " + self.get_winner(result[key][file]))
             print()
-
 
 if __name__ == "__main__":
     classification = Classification()
